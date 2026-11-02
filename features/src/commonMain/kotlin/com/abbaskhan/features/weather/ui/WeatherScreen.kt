@@ -65,7 +65,20 @@ fun WeatherDashboardScreen(
     onSearchNavClick: () -> Unit = {},
     onFavoritesNavClick: () -> Unit = {},
 ) {
+    var selectedBottomTab by remember { mutableStateOf(0) }
+    var detailSourceTab by remember { mutableStateOf(0) }
+    var selectedDetailCity by remember { mutableStateOf<String?>(null) }
 
+    if (selectedDetailCity != null) {
+        WeatherDetailScreen(
+            cityName = selectedDetailCity!!,
+            onBackClick = {
+                selectedDetailCity = null
+                selectedBottomTab = detailSourceTab
+            }
+        )
+        return
+    }
 
     val state by viewModel.uiState.collectAsState()
 
@@ -76,14 +89,8 @@ fun WeatherDashboardScreen(
         },
         modifier = Modifier.fillMaxSize()
     ) {
-        // Your existing dashboard content
-
-
-        val state by viewModel.uiState.collectAsState()
         val weather = state.weather
 
-
-        var selectedBottomTab by remember { mutableStateOf(0) }
         var selectedHourlyIndex by remember { mutableStateOf(0) }
         var showSearchDialog by remember { mutableStateOf(false) }
         var searchQuery by remember(state.cityQuery) {
@@ -148,8 +155,12 @@ fun WeatherDashboardScreen(
                             ) {
                                 TopNavigationBar(
                                     cityName = cityName,
+                                    isFavorite = state.isFavorite,
                                     onLocationClick = {
                                         showSearchDialog = true
+                                    },
+                                    onFavoriteClick = {
+                                        viewModel.toggleFavorite()
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                         .padding(horizontal = 20.dp, vertical = 12.dp)
@@ -198,18 +209,24 @@ fun WeatherDashboardScreen(
 
                         1 -> {
                             SearchCityScreen(
+                                recentSearches = state.recentSearches,
                                 onBackClick = { selectedBottomTab = 0 },
                                 onCitySelected = { city ->
-                                    viewModel.searchCity(city)
-                                    selectedBottomTab = 0
+                                    viewModel.recordSearch(city)
+                                    detailSourceTab = 1
+                                    selectedDetailCity = city
                                 })
                         }
 
                         2 -> {
                             FavoritesScreen(
+                                favoriteWeatherList = state.favoriteWeatherList,
                                 onCityClick = { city ->
-                                    viewModel.searchCity(city)
-                                    selectedBottomTab = 0
+                                    detailSourceTab = 2
+                                    selectedDetailCity = city
+                                },
+                                onRemoveClick = { city ->
+                                    viewModel.removeFavorite(city)
                                 })
                         }
                     }
@@ -266,7 +283,9 @@ fun WeatherDashboardScreen(
 @Composable
 private fun TopNavigationBar(
     cityName: String,
+    isFavorite: Boolean,
     onLocationClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -291,6 +310,18 @@ private fun TopNavigationBar(
 
         }
 
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .clickable(onClick = onFavoriteClick)
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (isFavorite) "❤️" else "🤍",
+                fontSize = 22.sp
+            )
+        }
     }
 }
 
@@ -399,7 +430,7 @@ private fun WeatherDetailsSheet(
 
 
 @Composable
-private fun MetricCardPair(
+internal fun MetricCardPair(
     topTitle: String,
     topValue: String,
     topIcon: @Composable () -> Unit,
@@ -704,7 +735,7 @@ private fun HeroBackground(
 // Icon Canvas Composables
 
 @Composable
-private fun SunHeaderIcon(modifier: Modifier = Modifier) {
+internal fun SunHeaderIcon(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension * 0.26f
@@ -797,7 +828,7 @@ private fun MenuIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
 }
 
 @Composable
-private fun LocationPinIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
+internal fun LocationPinIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -857,7 +888,7 @@ private fun SearchHeaderIcon(modifier: Modifier = Modifier, tint: Color = Color.
 }
 
 @Composable
-private fun DropletMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
+internal fun DropletMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -886,7 +917,7 @@ private fun DropletMetricIcon(modifier: Modifier = Modifier, tint: Color = Color
 }
 
 @Composable
-private fun WindMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
+internal fun WindMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -916,7 +947,7 @@ private fun WindMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0x
 }
 
 @Composable
-private fun PressureMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
+internal fun PressureMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -947,7 +978,7 @@ private fun PressureMetricIcon(modifier: Modifier = Modifier, tint: Color = Colo
 }
 
 @Composable
-private fun VisibilityMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
+internal fun VisibilityMetricIcon(modifier: Modifier = Modifier, tint: Color = Color(0xFF1A60B7)) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
