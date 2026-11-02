@@ -29,3 +29,6 @@ dependencyResolutionManagement {
 
 include(":androidApp")
 include(":shared")
+include(":data")
+include(":domain")
+include(":features")
